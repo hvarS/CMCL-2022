@@ -4,9 +4,12 @@ import pandas as pd
 from base_dataset import CreateDataset
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
-
+from tqdm import tqdm
+from statistics import mean
 
 MAX_EPOCHS = 10
+
+device = device = torch.device("cuda:1") if torch.cuda.is_available() else torch.device("cpu")
 
 transformer_model_pretrained = 'bert-base-uncased'
 
@@ -27,6 +30,10 @@ val_dataloader = DataLoader(val_dataset,batch_size=8,shuffle = True)
 
 
 model = Transformer(transformer_model_pretrained,num_classes = 4)
+
+##Shift to CUDA backend
+model.to(device)
+
 optimizer = torch.optim.AdamW(model.parameters(),lr = 1e-3)
 loss_fn = torch.nn.MSELoss()
 
@@ -37,9 +44,11 @@ for epoch in range(MAX_EPOCHS):
     ############-------Train------##############
     size = len(train_dataloader.dataset)
     model.train()
-    for idx,batch in enumerate(train_dataloader):
+    losses = []
+    for idx,batch in enumerate(tqdm(train_dataloader)):
         x = batch[0]
-        y = batch[1]
+        x = {key:value.to(device) for key,value in x.items()}
+        y = batch[1].to(device)
 
         y_pred = model(x)
         loss = loss_fn(y_pred,y)
@@ -49,23 +58,26 @@ for epoch in range(MAX_EPOCHS):
         loss.backward()
         optimizer.step()
 
-        if idx % 100 == 0:
-            loss, current = loss.item(), idx* len(x)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        losses.append(loss.item())
     
+    loss = mean(losses)
+    print('-----------Training Loss---------------::',loss)
+
     ############-------Validation-----##############
     size = len(val_dataloader.dataset)
+    losses = []
     model.eval()
     with torch.no_grad():
-        for idx,batch in enumerate(train_dataloader):
+        for idx,batch in enumerate(tqdm(train_dataloader)):
             x = batch[0]
-            y = batch[1]
+            x = {key:value.to(device) for key,value in x.items()}
+            y = batch[1].to(device)
 
             y_pred = model(x)
             loss = loss_fn(y_pred,y)
 
-            if idx % 100 == 0:
-                loss, current = loss.item(), idx* len(x)
-                print(f"validation loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+            losses.append(loss.item())
+    loss = mean(losses)
+    print('-----------Validation Loss---------------::',loss)
 
 
