@@ -26,9 +26,10 @@ class Transformer(nn.Module):
 
     def forward(self, encodings):
 
-        input_ids = encodings['input_ids']
-        attention_mask = encodings['attention_mask']
-        output = self.transformer(input_ids,attention_mask = attention_mask)
+        # input_ids = encodings['input_ids']
+        # attention_mask = encodings['attention_mask']
+        # token_type_ids = encodings['token_type_ids']
+        output = self.transformer(**encodings)
         hidden_states = output['hidden_states']
         
         hidden_states = hidden_states[-1][:, 0] # Use the representation of the first token of the last layer

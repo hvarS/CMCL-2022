@@ -11,7 +11,7 @@ MAX_EPOCHS = 10
 
 device = device = torch.device("cuda:1") if torch.cuda.is_available() else torch.device("cpu")
 
-transformer_model_pretrained = 'bert-base-uncased'
+transformer_model_pretrained = 'bert-base-multilingual-cased'
 
 data = data = pd.read_csv('training_data2022/training_data/train_left_concat.csv')
 
