@@ -6,6 +6,8 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from statistics import mean
+from torchmetrics.functional import r2_score
+import numpy as np
 
 MAX_EPOCHS = 10
 
@@ -66,6 +68,8 @@ for epoch in range(MAX_EPOCHS):
     ############-------Validation-----##############
     size = len(val_dataloader.dataset)
     losses = []
+    preds = []
+    targets = []
     model.eval()
     with torch.no_grad():
         for idx,batch in enumerate(tqdm(train_dataloader)):
@@ -76,8 +80,13 @@ for epoch in range(MAX_EPOCHS):
             y_pred = model(x)
             loss = loss_fn(y_pred,y)
 
+            targets.append(y.detach())
+            preds.append(y_pred.detach())
             losses.append(loss.item())
     loss = mean(losses)
+    targets = torch.cat(targets)
+    preds = torch.cat(preds)
     print('-----------Validation Loss---------------::',loss)
+    print('===========R2 Score :: ',r2_score(preds,targets).item())
 
 
