@@ -46,12 +46,14 @@ class RobertaRegressionModel(torch.nn.Module):
 class ModelTrainer():
   """Handles training and prediction given CSV"""
 
-  def __init__(self, model_name='roberta-base'):
+  def __init__(self, model_name='roberta-base',text_name = 'ZuCo1'):
     self.model_name = model_name
     self.model = RobertaRegressionModel(model_name).to(device)
+    self.text_name = text_name
 
 
-  def train(self, train_df, valid_df=None, num_epochs=5, lr=5e-5, batch_size=16, feature_ids=[0,1,2,3,4]):
+  def train(self, train_df, valid_df=None, num_epochs=5, lr=5e-5, batch_size=16, feature_ids=[0,1,2,3]):
+    train_df = train_df[train_df.text_name == self.text_name]
     train_data = src.dataloader.EyeTrackingCSV(train_df, model_name=self.model_name)
 
     random.seed(12345)

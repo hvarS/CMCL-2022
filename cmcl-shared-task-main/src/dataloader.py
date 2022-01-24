@@ -12,16 +12,14 @@ class EyeTrackingCSV(torch.utils.data.Dataset):
 
     # Re-number the sentence ids, assuming they are [N, N+1, ...] for some N
     self.df.sentence_id = self.df.sentence_id - self.df.sentence_id.min()
-    self.num_sentences = self.df.sentence_id.max() + 1
-    assert self.num_sentences == self.df.sentence_id.nunique()
-
+    self.sentence_ids = self.df.sentence_id.unique()
+    self.num_sentences = len(self.sentence_ids)
     self.texts = []
-    for i in range(self.num_sentences):
-      rows = self.df[self.df.sentence_id == i]
+    for id in self.sentence_ids:
+      rows = self.df[self.df.sentence_id == id]
       text = rows.word.tolist()
       text[-1] = text[-1].replace('<EOS>', '')
       self.texts.append(text)
-
     # Tokenize all sentences
     if 'roberta' in model_name:
       self.tokenizer = transformers.RobertaTokenizerFast.from_pretrained(model_name, add_prefix_space=True)
@@ -46,10 +44,12 @@ class EyeTrackingCSV(torch.utils.data.Dataset):
     elif 'bert' in self.model_name:
       is_first_subword = [t0 == 0 and t1 > 0 for t0, t1 in offset_mapping]
 
-    features = -torch.ones((len(input_ids), 5))
+    features = -torch.ones((len(input_ids), 4))
     features[is_first_subword] = torch.Tensor(
       self.df[self.df.sentence_id == ix][FEATURES_NAMES].to_numpy()
     )
+
+    print(features)
 
     return (
       input_tokens,
