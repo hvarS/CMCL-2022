@@ -45,12 +45,6 @@ class EyeTrackingCSV(torch.utils.data.Dataset):
     elif 'bert' in self.model_name:
       is_first_subword = [t0 == 0 and t1 > 0 for t0, t1 in offset_mapping]
 
-    print(ix)
-    ls = []
-    for i,val in enumerate(is_first_subword):
-      if val:
-        ls.append(i)
-    print(ls)
     features = -torch.ones((len(input_ids), 4))
 
     features[is_first_subword] = torch.Tensor(
