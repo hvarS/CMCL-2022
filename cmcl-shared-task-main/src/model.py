@@ -83,7 +83,7 @@ class ModelTrainer():
     valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=16)
 
     predict_df = valid_df.copy()
-    predict_df[['nFix', 'FFD', 'GPT', 'TRT', 'fixProp']] = 9999
+    predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = 9999
 
     # Assume one-to-one matching between nonzero predictions and tokens
     predictions = []
@@ -102,5 +102,5 @@ class ModelTrainer():
             token_prediction[token_prediction < 0] = 0
             predictions.append(token_prediction)
 
-    predict_df[['nFix', 'FFD', 'GPT', 'TRT', 'fixProp']] = np.vstack(predictions)
+    predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = np.vstack(predictions)
     return predict_df

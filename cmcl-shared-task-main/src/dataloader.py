@@ -1,7 +1,7 @@
 import torch
 import transformers
 
-FEATURES_NAMES = ['nFix', 'FFD', 'GPT', 'TRT', 'fixProp']
+FEATURES_NAMES = ['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']
 
 class EyeTrackingCSV(torch.utils.data.Dataset):
   """Tokenize sentences and load them into tensors. Assume dataframe has sentence_id."""

@@ -1,19 +1,17 @@
 import numpy as np
 
 def evaluate(predict_df, truth_df):
-  """Compute MAE for each of the 5 variables."""
-  mae_nFix = np.abs(predict_df['nFix'] - truth_df['nFix']).mean()
-  mae_FFD = np.abs(predict_df['FFD'] - truth_df['FFD']).mean()
-  mae_GPT = np.abs(predict_df['GPT'] - truth_df['GPT']).mean()
-  mae_TRT = np.abs(predict_df['TRT'] - truth_df['TRT']).mean()
-  mae_fixProp = np.abs(predict_df['fixProp'] - truth_df['fixProp']).mean()
-  mae_overall = (mae_nFix + mae_FFD + mae_GPT + mae_TRT + mae_fixProp) / 5
+  """Compute MAE for each of the 4 variables."""
+  mae_FFDAvg = np.abs(predict_df['FFDAvg'] - truth_df['FFDAvg']).mean()
+  mae_FFDStd = np.abs(predict_df['FFDStd'] - truth_df['FFDStd']).mean()
+  mae_TRTAvg = np.abs(predict_df['TRTAvg'] - truth_df['TRTAvg']).mean()
+  mae_TRTStd = np.abs(predict_df['TRTStd'] - truth_df['TRTStd']).mean()
+  mae_overall = (mae_FFDAvg + mae_FFDStd + mae_TRTAvg + mae_TRTStd) / 4
 
-  print(f'MAE for nFix: {mae_nFix}')
-  print(f'MAE for FFD: {mae_FFD}')
-  print(f'MAE for GPT: {mae_GPT}')
-  print(f'MAE for TRT: {mae_TRT}')
-  print(f'MAE for fixProp: {mae_fixProp}')
+  print(f'MAE for FFDAvg: {mae_FFDAvg}')
+  print(f'MAE for FFDStd: {mae_FFDStd}')
+  print(f'MAE for TRTAvg: {mae_TRTAvg}')
+  print(f'MAE for TRTStd: {mae_TRTStd}')
   print(f'Overall MAE: {mae_overall}')
   return mae_overall
   
