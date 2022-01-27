@@ -6,12 +6,11 @@ FEATURES_NAMES = ['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']
 class EyeTrackingCSV(torch.utils.data.Dataset):
   """Tokenize sentences and load them into tensors. Assume dataframe has sentence_id."""
 
-  def __init__(self, df, model_name='roberta-base'):
+  def __init__(self, df, mode = 'train',model_name='roberta-base'):
     self.model_name = model_name
     self.df = df.copy()
-
+    self.mode = mode
     # Re-number the sentence ids, assuming they are [N, N+1, ...] for some N
-    self.df.sentence_id = self.df.sentence_id - self.df.sentence_id.min()
     self.sentence_ids = self.df.sentence_id.unique()
     self.sentence_id_mapper = {}
     for i in range(len(self.sentence_ids)):
@@ -44,16 +43,40 @@ class EyeTrackingCSV(torch.utils.data.Dataset):
       is_first_subword = [t[0] == 'Ġ' for t in input_tokens]
     elif 'bert' in self.model_name:
       is_first_subword = [t0 == 0 and t1 > 0 for t0, t1 in offset_mapping]
+    
+    ls = []
+    for i,val in enumerate(is_first_subword):
+      if val:
+        ls.append(i)
 
-    features = -torch.ones((len(input_ids), 4))
+    if self.mode =='train' or self.mode =='val':
+      features = -torch.ones((len(input_ids), 4))
 
-    features[is_first_subword] = torch.Tensor(
-      self.df[self.df.sentence_id == self.sentence_id_mapper[ix]][FEATURES_NAMES].to_numpy()
-    )
+      try:
+        features[is_first_subword] = torch.Tensor(
+          self.df[self.df.sentence_id == self.sentence_id_mapper[ix]][FEATURES_NAMES].to_numpy()
+        )
+      except:
+        print(ix,self.sentence_id_mapper[ix],len(ls))
 
-    return (
-      input_tokens,
-      torch.LongTensor(input_ids),
-      torch.LongTensor(attention_mask),
-      features,
-    )
+      return (
+        input_tokens,
+        torch.LongTensor(input_ids),
+        torch.LongTensor(attention_mask),
+        features,
+      )
+    else:
+      length = is_first_subword.count(True)
+      features = -torch.ones((len(input_ids), 4))
+
+      try:
+        features[is_first_subword] = torch.zeros(4)
+      except:
+        print(ix,self.sentence_id_mapper[ix],len(ls))
+
+      return (
+        input_tokens,
+        torch.LongTensor(input_ids),
+        torch.LongTensor(attention_mask),
+        features,
+      )
