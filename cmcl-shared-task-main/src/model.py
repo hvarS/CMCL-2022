@@ -6,7 +6,7 @@ from tqdm import tqdm
 import src.dataloader
 
 
-device = torch.device('cuda:2')
+device = torch.device('cuda:1')
 
 class RobertaRegressionModel(torch.nn.Module):
   def __init__(self, model_name='roberta-base'):
@@ -113,7 +113,7 @@ class ModelTrainer():
   def test(self, test_df):
     test_data = src.dataloader.EyeTrackingCSV(test_df,mode = 'test', model_name=self.model_name)
     test_loader = torch.utils.data.DataLoader(test_data, batch_size=16)
-
+    print(len(test_loader))
     predict_df = test_df.copy()
     predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = 9999
 
@@ -121,9 +121,12 @@ class ModelTrainer():
     predictions = []
     self.model.eval()
     for X_tokens, X_ids, X_attns, Y_true in test_loader:
+      print(Y_true.shape)
+
       X_ids = X_ids.to(device)
       X_attns = X_attns.to(device)
       predict_mask = torch.sum(Y_true, axis=2) >= 0
+      print(predict_mask.shape)
       with torch.no_grad():
         Y_pred = self.model(X_ids, X_attns, predict_mask).cpu()
       
