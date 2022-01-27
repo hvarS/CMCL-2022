@@ -60,7 +60,10 @@ class EyeTrackingCSV(torch.utils.data.Dataset):
           self.df[self.df.sentence_id == self.sentence_id_mapper[ix]][FEATURES_NAMES].to_numpy()
         )
       except:
-        print(ix,self.sentence_id_mapper[ix],len(ls))
+        print('dataloader_train/val',ix,self.sentence_id_mapper[ix],len(ls))
+        # for x,y in zip(input_tokens,is_first_subword):
+        #   print(x,y)
+        # raise Exception('Dataloader Length Not Matching')
 
       return (
         input_tokens,
@@ -75,7 +78,7 @@ class EyeTrackingCSV(torch.utils.data.Dataset):
       try:
         features[is_first_subword] = torch.zeros(4)
       except:
-        print(ix,self.sentence_id_mapper[ix],len(ls))
+        print('data_loader_test',ix,self.sentence_id_mapper[ix],len(ls))
 
       return (
         input_tokens,

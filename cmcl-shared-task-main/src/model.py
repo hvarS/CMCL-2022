@@ -2,7 +2,7 @@ import random
 import numpy as np
 import torch
 import transformers
-
+from tqdm import tqdm
 import src.dataloader
 
 
@@ -50,7 +50,7 @@ class ModelTrainer():
     self.text_name = text_name
 
 
-  def train(self, train_df, valid_df=None, num_epochs=5, lr=5e-5, batch_size=16, feature_ids=[0,1,2,3]):
+  def train(self, train_df, valid_df=None, num_epochs=5, lr=5e-5, batch_size=12, feature_ids=[0,1,2,3]):
     train_df = train_df[train_df.text_name == self.text_name]
     valid_df = valid_df[valid_df.text_name == self.text_name]
     train_data = src.dataloader.EyeTrackingCSV(train_df, model_name=self.model_name)
@@ -107,7 +107,7 @@ class ModelTrainer():
     try:
       predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = np.vstack(predictions)
     except:
-      print(len(predictions),predictions[0].shape,predict_df.shape)
+      print('predict',len(predictions),predictions[0].shape,predict_df.shape)
     return predict_df
 
   def test(self, test_df):
@@ -138,6 +138,6 @@ class ModelTrainer():
     try:
       predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = np.vstack(predictions)
     except:
-      print(len(predictions),predictions[0].shape,predict_df.shape)
+      print('test',len(predictions),predictions[0].shape,predict_df.shape)
     return predict_df
 
