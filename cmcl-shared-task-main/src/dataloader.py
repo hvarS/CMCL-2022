@@ -24,7 +24,7 @@ class EyeTrackingCSV(torch.utils.data.Dataset):
       self.texts.append(text)
     # Tokenize all sentences
     if 'roberta' in model_name:
-      self.tokenizer = transformers.RobertaTokenizerFast.from_pretrained(model_name, add_prefix_space=True)
+      self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_name, add_prefix_space=True)
     elif 'bert' in model_name:
       self.tokenizer = transformers.BertTokenizerFast.from_pretrained(model_name, add_prefix_space=True)
     self.ids = self.tokenizer(self.texts, padding=True, is_split_into_words=True, return_offsets_mapping=True)
@@ -39,10 +39,13 @@ class EyeTrackingCSV(torch.utils.data.Dataset):
     attention_mask = self.ids['attention_mask'][ix]
     input_tokens = [self.tokenizer.convert_ids_to_tokens(x) for x in input_ids]
     # First subword of each token starts with special character
-    if 'roberta' in self.model_name:
+    if 'xlm-roberta' in self.model_name:
+      is_first_subword = [t[0] == '▁' for t in input_tokens]
+    elif 'roberta' in self.model_name:
       is_first_subword = [t[0] == 'Ġ' for t in input_tokens]
     elif 'bert' in self.model_name:
       is_first_subword = [t0 == 0 and t1 > 0 for t0, t1 in offset_mapping]
+    
     
     ls = []
     for i,val in enumerate(is_first_subword):

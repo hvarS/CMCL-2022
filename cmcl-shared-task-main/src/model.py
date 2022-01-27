@@ -6,14 +6,14 @@ import transformers
 import src.dataloader
 
 
-device = torch.device('cuda:1')
+device = torch.device('cuda:2')
 
 class RobertaRegressionModel(torch.nn.Module):
   def __init__(self, model_name='roberta-base'):
     super(RobertaRegressionModel, self).__init__()
 
     if 'roberta' in model_name:
-      self.roberta = transformers.RobertaModel.from_pretrained(model_name)
+      self.roberta = transformers.AutoModel.from_pretrained(model_name)
     elif 'bert' in model_name:
       self.roberta = transformers.BertModel.from_pretrained(model_name)
 
@@ -44,7 +44,7 @@ class RobertaRegressionModel(torch.nn.Module):
 class ModelTrainer():
   """Handles training and prediction given CSV"""
 
-  def __init__(self, model_name='roberta-base',text_name = 'ZuCo1'):
+  def __init__(self, model_name='xlm-roberta-base',text_name = 'ZuCo1'):
     self.model_name = model_name
     self.model = RobertaRegressionModel(model_name).to(device)
     self.text_name = text_name
