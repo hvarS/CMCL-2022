@@ -19,16 +19,19 @@ class TransduciveDataset(Dataset):
         return len(self.texts)
     def __getitem__(self, index):
         encoded_inputs = self.tokenizer(self.texts[index],padding = 'max_length',is_split_into_words = True,max_length = MAX_LEN,truncation = True,return_tensors='pt')
-        labels = torch.zeros(MAX_LEN,4)
+        labels = -1.0*torch.ones(MAX_LEN,4)
+        labels_mask = []
         decoded_texts = self.tokenizer.convert_ids_to_tokens(encoded_inputs.input_ids[0])
         if not 'xlm' in self.tf_name:
             word_mask = [t!='[CLS]' and t!='[SEP]' and t!='[PAD]' and t[0]!='#' for t in decoded_texts]
         else:
             word_mask = [t[0]=='▁' for t in decoded_texts]
         try:
-            labels[word_mask] = torch.tensor(self.labels[index],dtype = torch.float) #[4,]
+            labels[word_mask] = torch.tensor(self.labels[index],dtype = torch.float) #[128,4]
+            y = torch.sum(labels,dim = 1) #[128]
+            labels_mask = [ s.item() !=-4.0 for s in y]
         except RuntimeError:
             print([(x,y) for x,y in zip(decoded_texts,word_mask)])
             raise 'Improper Tokenization '
-        return encoded_inputs,word_mask,labels
+        return encoded_inputs,word_mask,labels,labels_mask
 
