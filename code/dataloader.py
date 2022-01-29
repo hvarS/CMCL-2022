@@ -1,34 +1,52 @@
-from sys import getallocatedblocks
 import pytorch_lightning as pl
+import torch.utils.data as TorchData
 import pandas as pd
 from dataset import TransduciveDataset
 from utils import getLangText,seperateHyphenToSentence
 
 
 class TransduciveDataLoader(pl.LightningDataModule):
-    def __init__(self,train_location,val_location):
+    def __init__(self,train_location,val_location,langText):
         super().__init__()
         self.train_location = train_location
         self.val_location = val_location
+        self.langText = langText
 
     def prepare_data(self) -> None:
         self.train_df = pd.read_csv(self.train_location)
-        self.val_df = pd.read_csv(self.val_df)
+        self.val_df = pd.read_csv(self.val_location)
+        self.train_dataset = self.datasetGen(self.train_df)
+        self.val_dataset = self.datasetGen(self.val_df)
         return super().prepare_data()
 
-    def wordsToSentences(self,df):
+    def datasetGen(self,df):
         self.df = df.copy()
-        self.df.langText = self.df.sentence_id.apply(getLangText)
+        self.df['langText'] = self.df.sentence_id.apply(getLangText).astype(str)
         self.df.sentence_id = self.df.sentence_id.apply(seperateHyphenToSentence)
-        self.df = self.df[]
-        # Re-number the sentence ids, assuming they are [N, N+1, ...] for some N
-        self.df.sentence_id = self.df.sentence_id - self.df.sentence_id.min()
-        self.num_sentences = self.df.sentence_id.max() + 1
-        assert self.num_sentences == self.df.sentence_id.nunique()
+        self.df.sentence_id = self.df.sentence_id.astype(int)
+        self.df = self.df[self.df.langText == self.langText]
 
         self.texts = []
-        for i in range(self.num_sentences):
+        self.labels = []
+        for i in self.df.sentence_id.unique():
             rows = self.df[self.df.sentence_id == i]
+            labels = rows[['FFDAvg','FFDStd','TRTAvg','TRTStd']].to_numpy()
             text = rows.word.tolist()
-            text[-1] = text[-1].replace('<EOS>', '')
             self.texts.append(text)
+            self.labels.append(labels)
+        return TransduciveDataset(self.texts,self.labels)
+    def train_dataloader(self):
+        return TorchData.DataLoader(self.train_dataset,batch_size=8,shuffle = True)
+    def train_dataloader(self):
+        return TorchData.DataLoader(self.val_dataset,batch_size=8,shuffle = True)
+    
+
+train_loc = 'data/training_data/train.csv'
+val_loc = 'data/training_data/dev.csv'
+langText = 'ZuCo1'
+dataloader = TransduciveDataLoader(train_loc,val_loc,langText)
+dataloader.prepare_data()
+
+for batch in dataloader.train_dataloader():
+    enc_inputs,word_mask,labels= batch[0],batch[1],batch[2]
+    break
