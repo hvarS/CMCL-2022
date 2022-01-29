@@ -9,7 +9,7 @@ tf_name = 'xlm-roberta-base'
 train_loc = 'data/training_data/train.csv'
 val_loc = 'data/training_data/dev.csv'
 test_loc = ''
-langText = langTexts[7]
+langText = langTexts[5]
 
 
 dataloader = TransduciveDataLoader(train_loc,val_loc,langText,tf_name)
