@@ -9,10 +9,9 @@ tf_name = 'xlm-roberta-base'
 train_loc = 'data/training_data/train.csv'
 val_loc = 'data/training_data/dev.csv'
 test_loc = ''
-langText = langTexts[5]
 
 
-dataloader = TransduciveDataLoader(train_loc,val_loc,langText,tf_name)
+dataloader = TransduciveDataLoader(train_loc,val_loc,langTexts,tf_name)
 trainer = pl.Trainer(gpus = [1],
                     max_epochs = 15)
 model = tfRegressor(tf_name)

@@ -3,14 +3,15 @@ import torch.utils.data as TorchData
 import pandas as pd
 from dataset import TransduciveDataset
 from utils import getLangText,seperateHyphenToSentence
+import numpy as np
 
 
 class TransduciveDataLoader(pl.LightningDataModule):
-    def __init__(self,train_location,val_location,langText,tf_name):
+    def __init__(self,train_location,val_location,langTexts,tf_name):
         super().__init__()
         self.train_location = train_location
         self.val_location = val_location
-        self.langText = langText
+        self.langTexts = langTexts
         self.tf_name = tf_name
 
     def prepare_data(self) -> None:
@@ -25,16 +26,22 @@ class TransduciveDataLoader(pl.LightningDataModule):
         self.df['langText'] = self.df.sentence_id.apply(getLangText).astype(str)
         self.df.sentence_id = self.df.sentence_id.apply(seperateHyphenToSentence)
         self.df.sentence_id = self.df.sentence_id.astype(int)
-        self.df = self.df[self.df.langText == self.langText]
-
         self.texts = []
         self.labels = []
-        for i in self.df.sentence_id.unique():
-            rows = self.df[self.df.sentence_id == i]
-            labels = rows[['FFDAvg','FFDStd','TRTAvg','TRTStd']].to_numpy()
-            text = rows.word.tolist()
-            self.texts.append(text)
-            self.labels.append(labels)
+        for langText in self.langTexts:
+            df = self.df.copy()
+            df = df[df.langText == langText]
+            texts = []
+            labels = []
+            for i in df.sentence_id.unique():
+                rows = df[df.sentence_id == i]
+                label = rows[['FFDAvg','FFDStd','TRTAvg','TRTStd']].to_numpy()
+                text = rows.word.tolist()
+                texts.append(text)
+                labels.append(label)
+            self.texts.extend(texts)
+            self.labels.extend(labels)
+        self.labels = np.array(self.labels)
         return TransduciveDataset(self.texts,self.labels,self.tf_name)
 
     def train_dataloader(self):
