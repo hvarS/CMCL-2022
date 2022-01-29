@@ -6,6 +6,7 @@ class tfRegressor(pl.LightningModule):
     def __init__(self,tf_name):
         super(tfRegressor,self).__init__()
         self.fe = AutoModel.from_pretrained(tf_name)
+        self.hidden_regressor = torch.nn.Linear(768,768)
         self.regressor = torch.nn.Linear(768,4)
         self.criterion = torch.nn.L1Loss()
         
@@ -18,7 +19,8 @@ class tfRegressor(pl.LightningModule):
             encoded_inputs[key] = encoded_inputs[key].squeeze()
         outputs = self.fe(**encoded_inputs)
         outputs = outputs.last_hidden_state #[b,128,768]
-        preds = self.regressor(outputs) #[b,128,4]
+        preds = self.hidden_regressor(outputs)
+        preds = self.regressor(preds) #[b,128,4]
 
         ##Masking to generate equal number y_pred and y_true
         y_pred = preds[word_masks]
@@ -36,6 +38,11 @@ class tfRegressor(pl.LightningModule):
         return loss
     def validation_epoch_end(self, outputs):
         print('val loss ',torch.mean(torch.stack(outputs)))
+
+    def predict_step(self, batch,batch_idx):
+        y_pred,y_true = self(batch)
+        return y_pred
+
     def configure_optimizers(self):
         return torch.optim.AdamW(self.parameters(), lr=0.02)
     
