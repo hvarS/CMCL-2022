@@ -2,24 +2,24 @@ import random
 import numpy as np
 import torch
 import transformers
-
+from tqdm import tqdm
 import src.dataloader
 
 
-device = torch.device('cuda')
+device = torch.device('cuda:1')
 
 class RobertaRegressionModel(torch.nn.Module):
   def __init__(self, model_name='roberta-base'):
     super(RobertaRegressionModel, self).__init__()
 
     if 'roberta' in model_name:
-      self.roberta = transformers.RobertaModel.from_pretrained(model_name)
+      self.roberta = transformers.AutoModel.from_pretrained(model_name)
     elif 'bert' in model_name:
       self.roberta = transformers.BertModel.from_pretrained(model_name)
 
     EMBED_SIZE = 1024 if 'large' in model_name else 768
     self.decoder = torch.nn.Sequential(
-      torch.nn.Linear(EMBED_SIZE, 5)
+      torch.nn.Linear(EMBED_SIZE, 4)
     )
 
 
@@ -33,10 +33,8 @@ class RobertaRegressionModel(torch.nn.Module):
     """
     # (B, seqlen, 768)
     temp = self.roberta(X_ids, attention_mask=X_attns).last_hidden_state
-
-    # (B, seqlen, 5)
+    # (B, seqlen, 4)
     Y_pred = self.decoder(temp)
-
     # Where predict_mask == 0, set Y_pred to -1
     Y_pred[predict_mask == 0] = -1
 
@@ -46,18 +44,21 @@ class RobertaRegressionModel(torch.nn.Module):
 class ModelTrainer():
   """Handles training and prediction given CSV"""
 
-  def __init__(self, model_name='roberta-base'):
+  def __init__(self, model_name='xlm-roberta-base',text_name = 'ZuCo1'):
     self.model_name = model_name
     self.model = RobertaRegressionModel(model_name).to(device)
+    self.text_name = text_name
 
 
-  def train(self, train_df, valid_df=None, num_epochs=5, lr=5e-5, batch_size=16, feature_ids=[0,1,2,3,4]):
+  def train(self, train_df, valid_df=None, num_epochs=5, lr=5e-5, batch_size=12, feature_ids=[0,1,2,3]):
+    train_df = train_df[train_df.text_name == self.text_name]
+    valid_df = valid_df[valid_df.text_name == self.text_name]
     train_data = src.dataloader.EyeTrackingCSV(train_df, model_name=self.model_name)
 
     random.seed(12345)
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True)
     opt = torch.optim.AdamW(self.model.parameters(), lr=lr)
-    mse = torch.nn.MSELoss()
+    mse = torch.nn.L1Loss()
 
     self.model.train()
     for epoch in range(num_epochs):
@@ -79,11 +80,11 @@ class ModelTrainer():
 
 
   def predict(self, valid_df):
-    valid_data = src.dataloader.EyeTrackingCSV(valid_df, model_name=self.model_name)
+    valid_data = src.dataloader.EyeTrackingCSV(valid_df,mode = 'val', model_name=self.model_name)
     valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=16)
 
     predict_df = valid_df.copy()
-    predict_df[['nFix', 'FFD', 'GPT', 'TRT', 'fixProp']] = 9999
+    predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = 9999
 
     # Assume one-to-one matching between nonzero predictions and tokens
     predictions = []
@@ -98,9 +99,48 @@ class ModelTrainer():
       for batch_ix in range(X_ids.shape[0]):
         for row_ix in range(X_ids.shape[1]):
           token_prediction = Y_pred[batch_ix, row_ix]
-          if token_prediction.sum() != -5.0:
+          if token_prediction.sum() != -4.0:
             token_prediction[token_prediction < 0] = 0
             predictions.append(token_prediction)
-
-    predict_df[['nFix', 'FFD', 'GPT', 'TRT', 'fixProp']] = np.vstack(predictions)
+    predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = np.vstack(predictions)
+    
+    try:
+      predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = np.vstack(predictions)
+    except:
+      print('predict',len(predictions),predictions[0].shape,predict_df.shape)
     return predict_df
+
+  def test(self, test_df):
+    test_data = src.dataloader.EyeTrackingCSV(test_df,mode = 'test', model_name=self.model_name)
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=16)
+    print(len(test_loader))
+    predict_df = test_df.copy()
+    predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = 9999
+
+    # Assume one-to-one matching between nonzero predictions and tokens
+    predictions = []
+    self.model.eval()
+    for X_tokens, X_ids, X_attns, Y_true in test_loader:
+      print(Y_true.shape)
+
+      X_ids = X_ids.to(device)
+      X_attns = X_attns.to(device)
+      predict_mask = torch.sum(Y_true, axis=2) >= 0
+      print(predict_mask.shape)
+      with torch.no_grad():
+        Y_pred = self.model(X_ids, X_attns, predict_mask).cpu()
+      
+      for batch_ix in range(X_ids.shape[0]):
+        for row_ix in range(X_ids.shape[1]):
+          token_prediction = Y_pred[batch_ix, row_ix]
+          if token_prediction.sum() != -4.0:
+            token_prediction[token_prediction < 0] = 0
+            predictions.append(token_prediction)
+    predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = np.vstack(predictions)
+    
+    try:
+      predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = np.vstack(predictions)
+    except:
+      print('test',len(predictions),predictions[0].shape,predict_df.shape)
+    return predict_df
+
