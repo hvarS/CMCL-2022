@@ -14,7 +14,9 @@ class tfRegressor(pl.LightningModule):
         word_masks = batch[1] #[b,128]
         labels = batch[2] #[b,128,4]
         labels_mask = batch[3] #[b,128]
-        outputs = self.fe(encoded_inputs['input_ids'],encoded_inputs['attention_mask'])
+        for key in encoded_inputs.keys():
+            encoded_inputs[key] = encoded_inputs[key].squeeze()
+        outputs = self.fe(**encoded_inputs)
         outputs = outputs.last_hidden_state #[b,128,768]
         preds = self.regressor(outputs) #[b,128,4]
 

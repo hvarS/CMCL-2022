@@ -27,9 +27,11 @@ class TransduciveDataset(Dataset):
         else:
             word_mask = [t[0]=='▁' for t in decoded_texts]
         try:
+            word_mask = torch.tensor(word_mask)
             labels[word_mask] = torch.tensor(self.labels[index],dtype = torch.float) #[128,4]
             y = torch.sum(labels,dim = 1) #[128]
             labels_mask = [ s.item() !=-4.0 for s in y]
+            labels_mask = torch.tensor(labels_mask)
         except RuntimeError:
             print([(x,y) for x,y in zip(decoded_texts,word_mask)])
             raise 'Improper Tokenization '
