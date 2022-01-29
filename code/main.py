@@ -13,7 +13,7 @@ test_loc = 'data/test_data_subtask1/sub1/test_copy.csv'
 
 dataloader = TransduciveDataLoader(train_loc,val_loc,test_loc,langTexts,tf_name)
 trainer = pl.Trainer(gpus = [1],
-                    max_epochs = 1)
+                    max_epochs = 10)
 model = tfRegressor(tf_name)
 
 trainer.fit(model,datamodule=dataloader)
