@@ -2,11 +2,14 @@ import pytorch_lightning as pl
 from xlm_roberta import tfRegressor
 from dataloader import TransduciveDataLoader
 
+langTexts = ['ZuCo1','ZuCo2','Provo','BSC','RSC','PAHEC','PoTeC','GECO-NL']
+
 tf_name = 'xlm-roberta-base'
 
 train_loc = 'data/training_data/train.csv'
 val_loc = 'data/training_data/dev.csv'
-langText = 'ZuCo1'
+test_loc = ''
+langText = langTexts[7]
 
 
 dataloader = TransduciveDataLoader(train_loc,val_loc,langText,tf_name)

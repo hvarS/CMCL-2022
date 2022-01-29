@@ -38,9 +38,10 @@ class TransduciveDataLoader(pl.LightningDataModule):
         return TransduciveDataset(self.texts,self.labels,self.tf_name)
 
     def train_dataloader(self):
-        return TorchData.DataLoader(self.train_dataset,batch_size=8,shuffle = True)
-    def train_dataloader(self):
-        return TorchData.DataLoader(self.val_dataset,batch_size=8,shuffle = True)
+        return TorchData.DataLoader(self.train_dataset,batch_size=16,shuffle = True)
+    def val_dataloader(self):
+        return TorchData.DataLoader(self.val_dataset,batch_size=16,shuffle = True)
+
     
 
 # train_loc = 'data/training_data/train.csv'

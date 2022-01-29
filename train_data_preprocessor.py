@@ -10,7 +10,6 @@ def get_text_name(s):
     return '-'.join(elements[:-1])
 
 df = pd.read_csv('data/test_data_subtask2/sub2/test.csv')
-df['text_name'] = df['sentence_id'].apply(get_text_name)
+df['langText'] = df['sentence_id'].apply(get_text_name)
 df['sentence_id'] = df['sentence_id'].apply(get_sentence_number)
 df.to_csv('data/test_data/test_task2.csv',index = False)
-print(df['text_name'].unique())

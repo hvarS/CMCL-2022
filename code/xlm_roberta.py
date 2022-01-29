@@ -30,7 +30,10 @@ class tfRegressor(pl.LightningModule):
         y_pred,y_true = self(batch)
         loss = self.criterion(y_pred,y_true)
         return loss
-    
+    def validation_step(self,batch,idx):
+        y_pred,y_true = self(batch)
+        loss = self.criterion(y_pred,y_true)
+        print('val loss ',loss)
     def configure_optimizers(self):
         return torch.optim.AdamW(self.parameters(), lr=0.02)
     
