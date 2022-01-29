@@ -11,7 +11,7 @@ langText = 'ZuCo1'
 
 dataloader = TransduciveDataLoader(train_loc,val_loc,langText,tf_name)
 trainer = pl.Trainer(gpus = [1],
-                    max_epochs = 1)
+                    max_epochs = 15)
 model = tfRegressor(tf_name)
 
 trainer.fit(model,datamodule=dataloader)
