@@ -61,7 +61,7 @@ class TransduciveDataLoader(pl.LightningDataModule):
             labels = []
             for i in df.sentence_id.unique():
                 rows = df[df.sentence_id == i]
-                label = np.zeros((len(rows),4))
+                label = -np.ones((len(rows),4))
                 text = rows.word.tolist()
                 texts.append(text)
                 labels.append(label)

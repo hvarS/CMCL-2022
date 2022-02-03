@@ -1,50 +1,70 @@
 import pytorch_lightning as pl
 from transformers import AutoModel,AutoTokenizer
 import torch
+import numpy as np
 
 class tfRegressor(pl.LightningModule):
-    def __init__(self,tf_name):
+    def __init__(self,lr,tf_name):
         super(tfRegressor,self).__init__()
         self.fe = AutoModel.from_pretrained(tf_name)
-        self.hidden_regressor = torch.nn.Linear(768,768)
+        self.lr = lr
         self.regressor = torch.nn.Linear(768,4)
         self.criterion = torch.nn.L1Loss()
         
-    def forward(self,batch):
+    def forward(self,encoded_inputs):
+        outputs = self.fe(**encoded_inputs)
+        outputs = outputs.last_hidden_state #[b,128,768]
+        preds = self.regressor(outputs) #[b,128,4]
+        return preds
+        
+    def training_step(self,batch,idx):
         encoded_inputs = batch[0] #{i/p_ids,attention_masks}
         word_masks = batch[1] #[b,128]
         labels = batch[2] #[b,128,4]
-        labels_mask = batch[3] #[b,128]
         for key in encoded_inputs.keys():
             encoded_inputs[key] = encoded_inputs[key].squeeze()
-        outputs = self.fe(**encoded_inputs)
-        outputs = outputs.last_hidden_state #[b,128,768]
-        preds = self.hidden_regressor(outputs)
-        preds = self.regressor(preds) #[b,128,4]
-
+        preds = self(encoded_inputs)
         ##Masking to generate equal number y_pred and y_true
-        y_pred = preds[word_masks]
-        y_true = labels[labels_mask]
+        preds[word_masks == 0] = -1
+        y_pred = preds
+        y_true = labels
 
         assert y_pred.shape == y_true.shape
-        return y_pred,y_true
-    def training_step(self,batch,idx):
-        y_pred,y_true = self(batch)
         loss = self.criterion(y_pred,y_true)
+        
         return loss
+    
     def validation_step(self,batch,idx):
-        y_pred,y_true = self(batch)
+        encoded_inputs = batch[0] #{i/p_ids,attention_masks}
+        word_masks = batch[1] #[b,128]
+        labels = batch[2] #[b,128,4]
+        for key in encoded_inputs.keys():
+            encoded_inputs[key] = encoded_inputs[key].squeeze()
+        preds = self(encoded_inputs)
+        ##Masking to generate equal number y_pred and y_true
+        preds[word_masks == 0] = -1
+        y_pred = preds
+        y_true = labels
+
+        assert y_pred.shape == y_true.shape
         loss = self.criterion(y_pred,y_true)
-        return loss
+        
+        return loss  
+
     def validation_epoch_end(self, outputs):
         print('val loss ',torch.mean(torch.stack(outputs)))
-
     def predict_step(self, batch,batch_idx):
-        y_pred,y_true = self(batch)
-        return y_pred
+        encoded_inputs = batch[0] #{i/p_ids,attention_masks}
+        word_masks = batch[1] #[b,128]
+        labels = batch[2] #[b,128,4]
+        for key in encoded_inputs.keys():
+            encoded_inputs[key] = encoded_inputs[key].squeeze()
+        preds = self(encoded_inputs)
+        
+        return preds[word_masks]
 
     def configure_optimizers(self):
-        return torch.optim.AdamW(self.parameters(), lr=0.02)
+        return torch.optim.AdamW(self.parameters(), lr=self.lr)
     
 
 

@@ -11,8 +11,8 @@ class TransduciveDataset(Dataset):
             assert len(texts) == len(labels)
         except AssertionError:
             print(len(texts),len(labels))
-        self.texts = texts
-        self.labels = labels
+        self.texts = texts  #[b,]
+        self.labels = labels    #[b,x,4]
         self.tf_name = tf_name
         self.mode = mode
         self.tokenizer = AutoTokenizer.from_pretrained(tf_name)
@@ -20,11 +20,7 @@ class TransduciveDataset(Dataset):
         return len(self.texts)
     def __getitem__(self, index):
         encoded_inputs = self.tokenizer(self.texts[index],padding = 'max_length',is_split_into_words = True,max_length = MAX_LEN,truncation = True,return_tensors='pt')
-        if self.mode == 'test':
-            labels = torch.full((MAX_LEN,4),9999.0)
-        else:
-            labels = -1.0*torch.ones(MAX_LEN,4)
-        labels_mask = []
+        labels = -1.0*torch.ones(MAX_LEN,4)
         decoded_texts = self.tokenizer.convert_ids_to_tokens(encoded_inputs.input_ids[0])
         if not 'xlm' in self.tf_name:
             word_mask = [t!='[CLS]' and t!='[SEP]' and t!='[PAD]' and t[0]!='#' for t in decoded_texts]
@@ -32,15 +28,9 @@ class TransduciveDataset(Dataset):
             word_mask = [t[0]=='▁' for t in decoded_texts]
         try:
             word_mask = torch.tensor(word_mask)
-            labels[word_mask] = torch.tensor(self.labels[index],dtype = torch.float) #[128,4]
-            y = torch.sum(labels,dim = 1) #[128]
-            if self.mode == 'test':
-                labels_mask = [ s.item() == 0 for s in y]
-            else:
-                labels_mask = [ s.item() !=-4.0 for s in y]
-            labels_mask = torch.tensor(labels_mask)
+            labels[word_mask] = torch.tensor(self.labels[index],dtype = torch.float) #[128,4]            
         except RuntimeError:
             print([(x,y) for x,y in zip(decoded_texts,word_mask)])
             raise 'Improper Tokenization '
-        return encoded_inputs,word_mask,labels,labels_mask
+        return encoded_inputs,word_mask,labels
 
