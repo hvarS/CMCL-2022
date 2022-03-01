@@ -19,7 +19,7 @@ predictions_loc = 'data/task1_predictions/preds.csv'
 
 dataloader = TransduciveDataLoader(train_loc,val_loc,test_loc,langTexts,tf_name)
 trainer = pl.Trainer(gpus = [1],
-                    max_epochs = 200,
+                    max_epochs = 10,
                     auto_lr_find = True)
 model = tfRegressor(tf_name = tf_name,lr = 1e-2)
 

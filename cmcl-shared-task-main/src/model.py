@@ -51,8 +51,8 @@ class ModelTrainer():
 
 
   def train(self, train_df, valid_df=None, num_epochs=5, lr=5e-5, batch_size=12, feature_ids=[0,1,2,3]):
-    train_df = train_df[train_df.text_name == self.text_name]
-    valid_df = valid_df[valid_df.text_name == self.text_name]
+    train_df = train_df[train_df.langText == self.text_name]
+    valid_df = valid_df[valid_df.langText == self.text_name]
     train_data = src.dataloader.EyeTrackingCSV(train_df, model_name=self.model_name)
 
     random.seed(12345)
@@ -127,6 +127,104 @@ class ModelTrainer():
       X_attns = X_attns.to(device)
       predict_mask = torch.sum(Y_true, axis=2) >= 0
       print(predict_mask.shape)
+      with torch.no_grad():
+        Y_pred = self.model(X_ids, X_attns, predict_mask).cpu()
+      
+      for batch_ix in range(X_ids.shape[0]):
+        for row_ix in range(X_ids.shape[1]):
+          token_prediction = Y_pred[batch_ix, row_ix]
+          if token_prediction.sum() != -4.0:
+            token_prediction[token_prediction < 0] = 0
+            predictions.append(token_prediction)
+    predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = np.vstack(predictions)
+    
+    try:
+      predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = np.vstack(predictions)
+    except:
+      print('test',len(predictions),predictions[0].shape,predict_df.shape)
+    return predict_df
+
+
+class ModelTrainerNew():
+  """Handles training and prediction given CSV"""
+
+  def __init__(self, model_name='xlm-roberta-base'):
+    self.model_name = model_name
+    self.model = RobertaRegressionModel(model_name).to(device)
+
+
+  def train(self, train_df, valid_df=None, num_epochs=5, lr=5e-5, batch_size=12, feature_ids=[0,1,2,3]):
+    train_data = src.dataloader.EyeTrackingCSV(train_df, model_name=self.model_name)
+
+    random.seed(12345)
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True)
+    opt = torch.optim.AdamW(self.model.parameters(), lr=lr)
+    mse = torch.nn.L1Loss()
+
+    self.model.train()
+    for epoch in range(num_epochs):
+      for X_tokens, X_ids, X_attns, Y_true in train_loader:
+        opt.zero_grad()
+        X_ids = X_ids.to(device)
+        X_attns = X_attns.to(device)
+        Y_true = Y_true.to(device)
+        predict_mask = torch.sum(Y_true, axis=2) >= 0
+        Y_pred = self.model(X_ids, X_attns, predict_mask)
+        loss = mse(Y_true[:,:,feature_ids], Y_pred[:,:,feature_ids])
+        loss.backward()
+        opt.step()
+
+      print('Epoch:', epoch+1)
+      if valid_df is not None:
+        predict_df = self.predict(valid_df)
+        src.eval_metric.evaluate(predict_df, valid_df)
+
+
+  def predict(self, valid_df):
+    valid_data = src.dataloader.EyeTrackingCSV(valid_df,mode = 'val', model_name=self.model_name)
+    valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=32)
+
+    predict_df = valid_df.copy()
+    predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = 9999
+
+    # Assume one-to-one matching between nonzero predictions and tokens
+    predictions = []
+    self.model.eval()
+    for X_tokens, X_ids, X_attns, Y_true in valid_loader:
+      X_ids = X_ids.to(device)
+      X_attns = X_attns.to(device)
+      predict_mask = torch.sum(Y_true, axis=2) >= 0
+      with torch.no_grad():
+        Y_pred = self.model(X_ids, X_attns, predict_mask).cpu()
+      
+      for batch_ix in range(X_ids.shape[0]):
+        for row_ix in range(X_ids.shape[1]):
+          token_prediction = Y_pred[batch_ix, row_ix]
+          if token_prediction.sum() != -4.0:
+            token_prediction[token_prediction < 0] = 0
+            predictions.append(token_prediction)
+    predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = np.vstack(predictions)
+    
+    try:
+      predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = np.vstack(predictions)
+    except:
+      print('predict',len(predictions),predictions[0].shape,predict_df.shape)
+    return predict_df
+
+  def test(self, test_df):
+    test_data = src.dataloader.EyeTrackingCSV(test_df,mode = 'test', model_name=self.model_name)
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=32)
+    predict_df = test_df.copy()
+    predict_df[['FFDAvg', 'FFDStd', 'TRTAvg', 'TRTStd']] = 9999
+
+    # Assume one-to-one matching between nonzero predictions and tokens
+    predictions = []
+    self.model.eval()
+    for X_tokens, X_ids, X_attns, Y_true in test_loader:
+
+      X_ids = X_ids.to(device)
+      X_attns = X_attns.to(device)
+      predict_mask = torch.sum(Y_true, axis=2) >= 0
       with torch.no_grad():
         Y_pred = self.model(X_ids, X_attns, predict_mask).cpu()
       

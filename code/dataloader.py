@@ -71,11 +71,11 @@ class TransduciveDataLoader(pl.LightningDataModule):
         return TransduciveDataset(self.texts,self.labels,tf_name = self.tf_name,mode = 'test')
 
     def train_dataloader(self):
-        return TorchData.DataLoader(self.train_dataset,batch_size=16,shuffle = True)
+        return TorchData.DataLoader(self.train_dataset,batch_size=16,shuffle = True,num_workers=12)
     def val_dataloader(self):
-        return TorchData.DataLoader(self.val_dataset,batch_size=16)
+        return TorchData.DataLoader(self.val_dataset,batch_size=16,num_workers=12)
     def predict_dataloader(self):
-        return TorchData.DataLoader(self.predict_dataset,batch_size=16)
+        return TorchData.DataLoader(self.predict_dataset,batch_size=16,num_workers=12)
 
     
 

@@ -4,7 +4,6 @@ import src.eval_metric
 import src.dataloader
 
 all_predictions = [pd.read_csv(f) for f in glob.glob('scripts/predict-*.csv')]
-valid_df = pd.read_csv("data/training_data/valid.csv")
 
 all_predictions = pd.concat(all_predictions)
 mean_df = all_predictions.groupby(['sentence_id', 'word_id', 'word']).mean().reset_index()

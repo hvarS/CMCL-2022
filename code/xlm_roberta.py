@@ -8,12 +8,17 @@ class tfRegressor(pl.LightningModule):
         super(tfRegressor,self).__init__()
         self.fe = AutoModel.from_pretrained(tf_name)
         self.lr = lr
-        self.regressor = torch.nn.Linear(768,4)
-        self.criterion = torch.nn.L1Loss()
+        self.linear = torch.nn.Linear(768,10024)
+        self.relu = torch.nn.LeakyReLU()
+        self.dropout = torch.nn.Dropout()
+        self.regressor = torch.nn.Linear(10024,4)
+        self.criterion = torch.nn.MSELoss()
         
     def forward(self,encoded_inputs):
         outputs = self.fe(**encoded_inputs)
         outputs = outputs.last_hidden_state #[b,128,768]
+        outputs = self.relu(self.linear(outputs))
+        outputs = self.dropout(outputs)
         preds = self.regressor(outputs) #[b,128,4]
         return preds
         
@@ -31,7 +36,7 @@ class tfRegressor(pl.LightningModule):
 
         assert y_pred.shape == y_true.shape
         loss = self.criterion(y_pred,y_true)
-        
+        self.log('Training Loss',loss,on_epoch=True)
         return loss
     
     def validation_step(self,batch,idx):
@@ -45,10 +50,10 @@ class tfRegressor(pl.LightningModule):
         preds[word_masks == 0] = -1
         y_pred = preds
         y_true = labels
-
+        
         assert y_pred.shape == y_true.shape
         loss = self.criterion(y_pred,y_true)
-        
+        self.log('Validation Loss',loss,on_epoch=True)
         return loss  
 
     def validation_epoch_end(self, outputs):
